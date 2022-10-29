@@ -9,7 +9,9 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "httpdef.h"
 #include "request_parser.h"
+#include "response.h"
 
 #include "config.h"
 
@@ -69,12 +71,19 @@ int setup_local_socket()
 
 int main(int argc, char **argv)
 {
-    (void) argc; (void) argv;
+    (void) argc; (void) argv; /* TODO: handle commandline args */
     struct sockaddr_storage remoteaddr;
     socklen_t remoteaddr_size;
 
     char addrbuff[INET6_ADDRSTRLEN], recvbuff[DATA_CAP];
     int servfd, client_fd;
+
+    if (!strncmp(ROOT_DIR, "_default_", 9)) {
+        fputs("[SERVER] Config error: the ROOT_DIR is set to '_default_', "
+              "please change it and recompile.\n",
+              stderr);
+        exit(1);
+    }
 
     servfd = setup_local_socket();
     puts("[SERVER] ready to accept connections");
@@ -110,9 +119,7 @@ int main(int argc, char **argv)
             assert(0 && "TODO: handle invalid requests");
         };
 
-        // printf("[PARSE] got httprequest with: %s and %s\n", req.url, req.version);
-
-        char response[128] = "HTTP/1.1 200 OK\r\n\r\n<h1>witam</h1>";
+        char *response = generate_response(&req);
         int bytes_sent = send(client_fd, response, strlen(response), 0);
         if (bytes_sent < 0) {
             perror("send");
