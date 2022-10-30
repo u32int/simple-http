@@ -49,6 +49,7 @@ int request_parse(const char *req, struct httprequest *ret)
                 i++;
             }
         } else {
+            /* TODO: Maybe some kind of a hashmap? */
             char *value = strstr(token, ": ");
             strncpy(ret->fields[i].key, token, MIN(value-token, HEADER_KEY_SIZE));
             strncpy(ret->fields[i].value, value+2, HEADER_VALUE_SIZE);
