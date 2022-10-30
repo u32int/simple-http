@@ -3,4 +3,4 @@
 #include <stddef.h>
 #include "httpdef.h"
 
-char *generate_response(struct httprequest *req);
+char *generate_response(char *str_request);

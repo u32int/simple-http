@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "request_parser.h"
 #include "response.h"
 
 #pragma GCC diagnostic ignored "-Wformat-truncation"
@@ -31,16 +32,21 @@ char *response_str(char *str)
     RETURN VALUE
      - pointer to malloc'd char * response
 */ 
-char *generate_response(struct httprequest *req)
+char *generate_response(char *str_request)
 {
-    switch (req->method) {
+    struct httprequest req;
+    if (request_parse(str_request, &req) < 0) {
+        return response_str("400 Bad Request");
+    }
+    
+    switch (req.method) {
     case GET: {
         FILE *f;
         char path[256];
-        if (req->url[0] == '/' && req->url[1] == '\0') {
+        if (req.url[0] == '/' && req.url[1] == '\0') {
             snprintf(path, 256, "%s/index.html", ROOT_DIR);
         } else {
-            snprintf(path, 256, "%s%s", ROOT_DIR, req->url);
+            snprintf(path, 256, "%s%s", ROOT_DIR, req.url);
         }
 
         f = fopen(path, "rb");
@@ -72,8 +78,9 @@ char *generate_response(struct httprequest *req)
         return buff;
     }
     default:
-        assert(0 && "method unimplemented");
-        break;
+        fprintf(stderr,
+                "generate_response: http method unimplemented (%d)", req.method);
+        return response_str("500 Internal Server Error");
     }
 
     return response_str("500 Internal Server Error");

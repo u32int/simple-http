@@ -9,8 +9,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "httpdef.h"
-#include "request_parser.h"
 #include "response.h"
 
 #include "config.h"
@@ -113,21 +111,17 @@ int main(int argc, char **argv)
 
         recvbuff[bytes_recv] = '\0';
         printf("[CLIENT]\n%s\n", recvbuff);
-        
-        struct httprequest req;
-        if (request_parse(recvbuff, &req) < 0) {
-            assert(0 && "TODO: handle invalid requests");
-        };
 
-        char *response = generate_response(&req);
+        char *response = generate_response(recvbuff);
+        /* TODO: make sure entire response is sent */
         int bytes_sent = send(client_fd, response, strlen(response), 0);
         if (bytes_sent < 0) {
-            perror("send");
-            shutdown(client_fd, 2);
-            continue;
+          perror("send");
+          return -1;
         }
 
         printf("[RESPONSE]\n%s\n", response);
+        free(response);
 
         shutdown(client_fd, 2);
     }
