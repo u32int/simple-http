@@ -10,15 +10,15 @@
 #include <netdb.h>
 
 #include "response.h"
-
 #include "config.h"
+
 
 int setup_local_socket()
 {
     struct addrinfo hints, *servinfo;
     int servfd, yes=1;
 
-    memset(&hints, 0, sizeof hints);
+    memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;     /* local socket for accepting connections */
     hints.ai_family = AF_INET;       /* ipv4 only */
     hints.ai_socktype = SOCK_STREAM;
@@ -113,11 +113,21 @@ int main(int argc, char **argv)
         printf("[CLIENT]\n%s\n", recvbuff);
 
         char *response = generate_response(recvbuff);
+        if (response == NULL) {
+            fputs("[SERVER] Fatal error while generating response.", stderr);
+            exit(1);
+        }
         /* TODO: make sure entire response is sent */
-        int bytes_sent = send(client_fd, response, strlen(response), 0);
-        if (bytes_sent < 0) {
-          perror("send");
-          return -1;
+        const size_t bytes_total = strlen(response);
+        int bytes_sent_curr;
+        size_t bytes_sent = 0;
+        while (bytes_sent < bytes_total) {
+            bytes_sent_curr = send(client_fd, response, strlen(response), 0);
+            if (bytes_sent_curr < 0) {
+                perror("send");
+                return -1;
+            }
+            bytes_sent += bytes_sent_curr;
         }
 
         printf("[RESPONSE]\n%s\n", response);
