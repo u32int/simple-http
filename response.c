@@ -15,7 +15,9 @@
 #define RESPONSE_BUFF_SIZE 4096
 
 #define RESPONSE_HTML_BEGIN "<!DOCTYPE html><html><body style=\"text-align: center\"><h1>"
-#define RESPONSE_HTML_END   "</h1></body></html>"
+#define RESPONSE_HTML_END "</h1></body></html>"
+
+static const size_t RHTML_PADDING = strlen(RESPONSE_HTML_BEGIN) + strlen(RESPONSE_HTML_END);
 
 /* response_fromstr - generate generic response given a string
    with format "<CODE> <PHRASE>"
@@ -31,17 +33,19 @@ char *response_fromstr(char *str)
     char *ret = (char*)calloc(RESPONSE_BUFF_SIZE, 1);
     if (ret == NULL) {
         perror("malloc");
-        exit(1);
+        return NULL;
     }
 
     snprintf(ret, RESPONSE_BUFF_SIZE,
              "%s %s\r\n"
              "Date: %s\r\n"
-             "Server: %s\r\n\r\n"
-             "%s%s%s",
+             "Server: %s\r\n"
+             "Content-Length: %lu\r\n"
+             "\r\n%s%s%s",
              RESPONSE_HTTP_VERSION, str,
              date_buff,
              SERVER_NAME,
+             strlen(str)+RHTML_PADDING,
              RESPONSE_HTML_BEGIN, str, RESPONSE_HTML_END);
 
     return ret;
@@ -78,14 +82,19 @@ char *generate_response(char *str_request)
         fseek(f, 0, SEEK_SET);
 
         char *buff = (char *)calloc(RESPONSE_BUFF_SIZE, 1);
+        if (buff == NULL) {
+            perror("malloc");
+            return response_fromstr("500 Internal Server Error");
+        }
 
         snprintf(buff, RESPONSE_BUFF_SIZE,
                  "HTTP/1.1 200 OK\r\n\r\n");
+        size_t buff_len = strlen(buff);
 
-        size_t bytes_read = fread(buff+strlen(buff), 1, file_size, f);
+        size_t bytes_read = fread(buff+buff_len, 1, file_size, f);
         fclose(f);
 
-        buff[bytes_read+strlen(buff)] = '\0';
+        buff[bytes_read+buff_len] = '\0';
 
         return buff;
     }
