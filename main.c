@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <stdbool.h>
 
 #include "response.h"
 #include "args_parser.h"
@@ -15,7 +16,7 @@
 
 char *ROOT_DIR = NULL;
 
-int setup_local_socket()
+ int setup_local_socket()
 {
     struct addrinfo hints, *servinfo;
     int servfd, yes=1;
@@ -73,15 +74,15 @@ int main(int argc, char **argv)
 {
     struct sockaddr_storage remoteaddr;
     socklen_t remoteaddr_size;
+    bool rootdir_mallocd = true;
 
-    ROOT_DIR = getenv("PWD"); /* default, might get overwritten by parse_args */
     parse_args(argc, argv);
-
     if (ROOT_DIR == NULL) {
-        fputs("[SERVER] ROOT_DIR is null."
-              "Reading env var 'PWD' failed and/or specified arg is invalid.\n",
-              stderr);
-        exit(1);
+        rootdir_mallocd = false;
+        if ((ROOT_DIR = getenv("PWD")) == NULL) {
+            perror("getenv");
+            exit(1);
+        }
     }
 
     printf("[SERVER] initializing with ROOT_DIR '%s'\n", ROOT_DIR);
@@ -130,22 +131,29 @@ int main(int argc, char **argv)
             fputs("[SERVER] Fatal error while generating response.", stderr);
             exit(1);
         }
-        /* TODO: make sure entire response is sent */
+
         const size_t bytes_total = strlen(response);
+        printf("total: %lu\n", bytes_total);
         int bytes_sent_curr;
         size_t bytes_sent = 0;
         while (bytes_sent < bytes_total) {
-            bytes_sent_curr = send(client_fd, response, strlen(response), 0);
+            bytes_sent_curr = send(client_fd, response+bytes_sent,
+                                   bytes_total-bytes_sent, 0);
             if (bytes_sent_curr < 0) {
                 perror("send");
                 return -1;
             }
             bytes_sent += bytes_sent_curr;
+            printf("[%lu/%lu]\n", bytes_sent, bytes_total);
         }
 
         printf("[RESPONSE]\n%s\n", response);
         free(response);
 
         shutdown(client_fd, 2);
+    }
+
+    if (rootdir_mallocd) {
+        free(ROOT_DIR);
     }
 }

@@ -1,8 +1,8 @@
 CC=gcc
-CFLAGS=-Wall -Wextra
+CFLAGS=-Wall -Wextra -g
 
-all: server.c
-	$(CC) $(CFLAGS) server.c request_parser.c response.c args_parser.c -o simple-http
+all:
+	$(CC) $(CFLAGS) main.c request_parser.c response.c args_parser.c -o simple-http
 
 clean:
-	rm server
+	rm simple-http 
