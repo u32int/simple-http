@@ -10,8 +10,10 @@
 #include <netdb.h>
 
 #include "response.h"
-
+#include "args_parser.h"
 #include "config.h"
+
+char *ROOT_DIR = NULL;
 
 int setup_local_socket()
 {
@@ -69,9 +71,20 @@ int setup_local_socket()
 
 int main(int argc, char **argv)
 {
-    (void) argc; (void) argv; /* TODO: handle commandline args */
     struct sockaddr_storage remoteaddr;
     socklen_t remoteaddr_size;
+
+    ROOT_DIR = getenv("PWD"); /* default, might get overwritten by parse_args */
+    parse_args(argc, argv);
+
+    if (ROOT_DIR == NULL) {
+        fputs("[SERVER] ROOT_DIR is null."
+              "Reading env var 'PWD' failed and/or specified arg is invalid.\n",
+              stderr);
+        exit(1);
+    }
+
+    printf("[SERVER] initializing with ROOT_DIR '%s'\n", ROOT_DIR);
 
     char addrbuff[INET6_ADDRSTRLEN], recvbuff[DATA_CAP];
     int servfd, client_fd;
