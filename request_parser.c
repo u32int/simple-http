@@ -43,9 +43,40 @@ int request_parse(const char *req, struct httprequest *ret)
                     if (ret->method == INVALID)
                         return -1; /* invalid http method */
                     break;
-                case -2: // url
+                case -2: { // url
+                    /* find the beginning of get parameters */
+                    int param_begin = -1;
+                    for (size_t i = 0; i < strlen(i_token); ++i) {
+                        if (i_token[i] == '?') {
+                            i_token[i] = 0;
+                            param_begin = i;
+                            break;
+                        }
+                    }
+
                     strncpy(ret->url, i_token, URL_FIELD_SIZE);
+
+                    if (param_begin != -1) {
+                        char *gp_token;
+                        int i = 0;
+                        i_token += param_begin + 1;
+                        while ((gp_token = strtok_r(i_token, "=", &i_token)) != NULL) {
+                            if (i % 2 == 0) {
+                                strncpy(ret->get_params[i/2].key,
+                                        gp_token,
+                                        MIN(strlen(gp_token), HEADER_KEY_SIZE));
+                            } else {
+                                strncpy(ret->get_params[i/2].key,
+                                        gp_token,
+                                        MIN(strlen(gp_token), HEADER_VALUE_SIZE));
+                            }
+                        }
+                        if (i % 2 != 0) {
+                            return -1; /* error: more keys than values */
+                        }
+                    }
                     break;
+                }
                 case -1: // version
                     strncpy(ret->version, i_token, VERSION_FIELD_SIZE);
                     break;

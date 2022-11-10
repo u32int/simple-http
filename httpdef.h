@@ -25,4 +25,5 @@ struct httprequest {
     char version[VERSION_FIELD_SIZE];
 
     struct httpheaderfield fields[HEADER_FIELD_NUM];
+    struct httpheaderfield get_params[HEADER_FIELD_NUM];
 };
