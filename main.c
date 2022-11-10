@@ -126,13 +126,17 @@ int main(int argc, char **argv)
         recvbuff[bytes_recv] = '\0';
         printf("[CLIENT]\n%s\n", recvbuff);
 
-        char *response = generate_response(recvbuff);
+        size_t bytes_total = 0;
+        char *response = generate_response(recvbuff, &bytes_total);
         if (response == NULL) {
             fputs("[SERVER] Fatal error while generating response.", stderr);
             exit(1);
         }
 
-        const size_t bytes_total = strlen(response);
+        if (bytes_total == 0) {
+            bytes_total = strlen(response);
+        }
+
         printf("total: %lu\n", bytes_total);
         int bytes_sent_curr;
         size_t bytes_sent = 0;

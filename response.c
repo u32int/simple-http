@@ -37,7 +37,7 @@ char *response_fromstr(char *str)
     char date_buff[128];
     get_date(date_buff, 128);
 
-    char *ret = (char*)calloc(RESPONSE_BUFF_SIZE, 1);
+    char *ret = (char*)malloc(RESPONSE_BUFF_SIZE);
     if (ret == NULL) {
         perror("malloc");
         return NULL;
@@ -62,8 +62,9 @@ char *response_fromstr(char *str)
     RETURN VALUE
     pointer to malloc'd char *response
 */ 
-char *generate_response(char *str_request)
+char *generate_response(char *str_request, size_t *bytes_total)
 {
+
     struct httprequest req;
     if (request_parse(str_request, &req) < 0) {
         return response_fromstr("400 Bad Request");
@@ -71,15 +72,14 @@ char *generate_response(char *str_request)
     
     switch (req.method) {
     case GET: {
-        FILE *f;
-        char path[256];
+        char file_name[256];
         if (req.url[0] == '/' && req.url[1] == '\0') {
-            snprintf(path, 256, "%s/index.html", ROOT_DIR);
+            snprintf(file_name, 256, "%s/index.html", ROOT_DIR);
         } else {
-            snprintf(path, 256, "%s%s", ROOT_DIR, req.url);
+            snprintf(file_name, 256, "%s/%s", ROOT_DIR, req.url);
         }
 
-        f = fopen(path, "rb");
+        FILE *f = fopen(file_name, "rb");
         if (f == NULL) {
             return response_fromstr("404 Not Found");
         }
@@ -87,17 +87,17 @@ char *generate_response(char *str_request)
         fseek(f, 0, SEEK_END);
         size_t file_size = ftell(f);
         fseek(f, 0, SEEK_SET);
-
-        char *buff = (char *)calloc(RESPONSE_BUFF_SIZE, 1);
-        if (buff == NULL) {
-            perror("malloc");
-            return response_fromstr("500 Internal Server Error");
-        }
-
+        
         char date_buff[128];
         get_date(date_buff, 128);
 
-        snprintf(buff, RESPONSE_BUFF_SIZE,
+        #define MAX_HEADER_SIZE 512
+        char *buff = malloc(file_size+MAX_HEADER_SIZE);
+        if (buff == NULL) {
+            perror("malloc");
+            exit(1);
+        }
+        snprintf(buff, MAX_HEADER_SIZE,
                 "%s HTTP/1.1 200 OK\r\n"
                 "Date: %s\r\n"
                 "Server: %s\r\n"
@@ -107,12 +107,12 @@ char *generate_response(char *str_request)
                 date_buff,
                 SERVER_NAME, file_size);
 
-        size_t buff_len = strlen(buff);
-        size_t bytes_read = fread(buff+buff_len, 1, file_size, f);
+        size_t headers_len = strlen(buff);
+        fread(buff+headers_len, 1, file_size, f);
         fclose(f);
 
-        buff[bytes_read+buff_len] = '\0';
-
+        *bytes_total = headers_len+file_size;
+        buff[*bytes_total] = 0;
         return buff;
     }
     default:
