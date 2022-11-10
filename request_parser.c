@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "httpdef.h"
 #include "request_parser.h"
 
 #define MIN(a,b) ((a)<(b)?(a):(b))
@@ -51,6 +52,12 @@ int request_parse(const char *req, struct httprequest *ret)
         } else {
             /* TODO: Maybe some kind of a hashmap? */
             char *value = strstr(token, ": ");
+
+            if (value == NULL || value-token > HEADER_KEY_SIZE ||
+                strlen(value)-2 > HEADER_VALUE_SIZE) {
+                return -1;
+            }
+
             strncpy(ret->fields[i].key, token, MIN(value-token, HEADER_KEY_SIZE));
             strncpy(ret->fields[i].value, value+2, HEADER_VALUE_SIZE);
             ret->fields[i].key[value-token] = '\0';

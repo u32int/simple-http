@@ -15,14 +15,14 @@ enum httpmethod {
 };
 
 struct httpheaderfield {
-    char key[32];
-    char value[128];
+    char key[HEADER_KEY_SIZE];
+    char value[HEADER_VALUE_SIZE];
 };
 
 struct httprequest {
     enum httpmethod method;
-    char url[256];
-    char version[8];
+    char url[URL_FIELD_SIZE];
+    char version[VERSION_FIELD_SIZE];
 
     struct httpheaderfield fields[HEADER_FIELD_NUM];
 };

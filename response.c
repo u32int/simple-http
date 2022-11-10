@@ -15,7 +15,18 @@
 #define RESPONSE_BUFF_SIZE 4096
 
 #define RESPONSE_HTML_BEGIN "<!DOCTYPE html><html><body style=\"text-align: center\"><h1>"
-#define RESPONSE_HTML_END   "</h1></body></html>"
+#define RESPONSE_HTML_END "</h1></body></html>"
+
+static const size_t RHTML_PADDING = strlen(RESPONSE_HTML_BEGIN) + strlen(RESPONSE_HTML_END);
+
+/* get_date - get current date in a html standard compliant format
+*/
+static void get_date(char *date_buff, size_t n)
+{
+    time_t t = time(NULL);
+    struct tm tm = *gmtime(&t);
+    strftime(date_buff, n, "%a, %d %b %Y %H:%M:%S %Z", &tm);
+}
 
 /* response_fromstr - generate generic response given a string
    with format "<CODE> <PHRASE>"
@@ -24,24 +35,24 @@
 char *response_fromstr(char *str)
 {
     char date_buff[128];
-    time_t t = time(NULL);
-    struct tm tm = *gmtime(&t);
-    strftime(date_buff, sizeof(date_buff), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+    get_date(date_buff, 128);
 
     char *ret = (char*)calloc(RESPONSE_BUFF_SIZE, 1);
     if (ret == NULL) {
         perror("malloc");
-        exit(1);
+        return NULL;
     }
 
     snprintf(ret, RESPONSE_BUFF_SIZE,
              "%s %s\r\n"
              "Date: %s\r\n"
-             "Server: %s\r\n\r\n"
-             "%s%s%s",
+             "Server: %s\r\n"
+             "Content-Length: %lu\r\n"
+             "\r\n%s%s%s",
              RESPONSE_HTTP_VERSION, str,
              date_buff,
              SERVER_NAME,
+             strlen(str)+RHTML_PADDING,
              RESPONSE_HTML_BEGIN, str, RESPONSE_HTML_END);
 
     return ret;
@@ -78,14 +89,29 @@ char *generate_response(char *str_request)
         fseek(f, 0, SEEK_SET);
 
         char *buff = (char *)calloc(RESPONSE_BUFF_SIZE, 1);
+        if (buff == NULL) {
+            perror("malloc");
+            return response_fromstr("500 Internal Server Error");
+        }
+
+        char date_buff[128];
+        get_date(date_buff, 128);
 
         snprintf(buff, RESPONSE_BUFF_SIZE,
-                 "HTTP/1.1 200 OK\r\n\r\n");
+                "%s HTTP/1.1 200 OK\r\n"
+                "Date: %s\r\n"
+                "Server: %s\r\n"
+                "Content-Length: %lu\r\n"
+                "\r\n",
+                RESPONSE_HTTP_VERSION,
+                date_buff,
+                SERVER_NAME, file_size);
 
-        size_t bytes_read = fread(buff+strlen(buff), 1, file_size, f);
+        size_t buff_len = strlen(buff);
+        size_t bytes_read = fread(buff+buff_len, 1, file_size, f);
         fclose(f);
 
-        buff[bytes_read+strlen(buff)] = '\0';
+        buff[bytes_read+buff_len] = '\0';
 
         return buff;
     }
