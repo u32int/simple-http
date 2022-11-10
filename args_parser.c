@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
+#include <sys/stat.h>
 
 void print_help()
 {
@@ -36,13 +36,21 @@ void parse_args(int argc, char **argv)
         case 'h':
             print_help();
             exit(0);
-        case 'd':
-            if (!opendir(optarg)) {
-                perror("[SERVER] opendir");
+        case 'd': {
+            struct stat s;
+            if (stat(optarg, &s) == 0) {
+                if (S_ISDIR(s.st_mode)) {
+                    ROOT_DIR = strdup(optarg);
+                } else {
+                    fprintf(stderr, "[SERVER] %s - not a directory", optarg);
+                    exit(1);
+                }
+            } else {
+                perror("[SERVER] stat");
                 exit(1);
             }
-            ROOT_DIR = strdup(optarg);
             break;
+        }
         default:
             exit(1);
         }

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "httpdef.h"
@@ -28,7 +29,8 @@ int request_parse(const char *req, struct httprequest *ret)
 {
     char *token, *i_token;
     char *req_dup = strdup(req);
-
+    char *req_dup_ptr = req_dup; /* needed to free later,
+                                    strtok modifies the original pointer */
     int i = -3;
     while ((token = strtok_r(req_dup, "\r\n", &req_dup)) != NULL) {
         if (i < 0) {
@@ -65,5 +67,6 @@ int request_parse(const char *req, struct httprequest *ret)
         }
     }
 
+    free(req_dup_ptr);
     return 0;
 }
